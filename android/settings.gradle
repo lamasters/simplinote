@@ -1,4 +1,4 @@
-rootProject.name = 'simplinote'
+rootProject.name = 'SimpliNote'
 
 dependencyResolutionManagement {
   versionCatalogs {
