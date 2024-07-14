@@ -1,4 +1,4 @@
-package com.lamasters.demo
+package com.lamasters.simplinote
 
 import android.os.Build
 import android.os.Bundle

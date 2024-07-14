@@ -64,24 +64,20 @@ export default function Index() {
     try {
       const data = await AsyncStorage.getItem("notes");
       if (data) {
-        console.log(data);
         let loadedNotes = new Map<string, Note>();
         const parsedNotes = JSON.parse(data);
-        console.log(parsedNotes);
         for (let item of parsedNotes) {
           let id = item[0];
           let note = item[1];
           if (!id) {
             continue;
           }
-          console.log(note);
           loadedNotes.set(id, {
             id: id,
             title: note["title"],
             content: note["content"],
           });
         }
-        console.log(loadedNotes);
         setNotes(loadedNotes);
         setNotesList(generateNotesList(loadedNotes, setNotes, setNotesList));
       }
@@ -104,7 +100,6 @@ export default function Index() {
     notes.set(newNote.id, newNote);
     setNotes(notes);
     setCurrentNote(newNote.id);
-    console.log(JSON.stringify(Array.from(notes.entries())));
     await AsyncStorage.setItem(
       "notes",
       JSON.stringify(Array.from(notes.entries())),

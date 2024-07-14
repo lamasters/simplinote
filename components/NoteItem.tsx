@@ -22,7 +22,6 @@ export function NoteItem(props: Props) {
         router.push("edit");
       }}
       onLongPress={() => {
-        console.log("Deleting note");
         props.deleteNote(props.note.id);
       }}
     >

@@ -25,8 +25,8 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="myapp"/>
-        <data android:scheme="com.lamasters.demo"/>
-        <data android:scheme="exp+demo-app"/>
+        <data android:scheme="com.lamasters.simplinote"/>
+        <data android:scheme="exp+simplinote"/>
       </intent-filter>
     </activity>
     <activity android:name="com.facebook.react.devsupport.DevSettingsActivity" android:exported="false"/>

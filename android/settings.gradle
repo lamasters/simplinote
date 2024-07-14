@@ -1,4 +1,4 @@
-rootProject.name = 'demo-app'
+rootProject.name = 'simplinote'
 
 dependencyResolutionManagement {
   versionCatalogs {
