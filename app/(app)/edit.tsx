@@ -3,40 +3,25 @@ import { ThemedView } from "@/components/ThemedView";
 import { StyleSheet, TextInput } from "react-native";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { useEffect, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Index() {
-  const { notes, setNotes, currentNote } = useStateContext();
-  const [text, setText] = useState("");
+  const { notes, currentNote, updateNote } = useStateContext();
+  const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
 
-  const updateText = async (text: string) => {
-    setText(text);
-    let note = notes.get(currentNote);
-    note.content = text;
-    notes.set(currentNote, note);
-    setNotes(notes);
-    await AsyncStorage.setItem(
-      "notes",
-      JSON.stringify(Array.from(notes.entries()))
-    );
+  const updateContent = async (content: string) => {
+    setContent(content);
+    await updateNote(title, content);
   };
 
   const updateTitle = async (title: string) => {
     setTitle(title);
-    let note = notes.get(currentNote);
-    note.title = title;
-    notes.set(currentNote, note);
-    setNotes(notes);
-    await AsyncStorage.setItem(
-      "notes",
-      JSON.stringify(Array.from(notes.entries()))
-    );
+    await updateNote(title, content);
   };
 
   useEffect(() => {
     let note = notes.get(currentNote);
-    setText(note.content);
+    setContent(note.content);
     setTitle(note.title);
   }, [currentNote]);
 
@@ -58,19 +43,15 @@ export default function Index() {
           color: textColor,
         }}
         value={title}
-        onChange={(e) => {
-          updateTitle(e.nativeEvent.text);
-        }}
+        onChangeText={(text) => updateTitle(text)}
       />
       <TextInput
         style={{ ...styles.textInput, color: textColor }}
         keyboardType="default"
         placeholder="Enter your note here..."
         placeholderTextColor={placeholderColor}
-        value={text}
-        onChange={(e) => {
-          updateText(e.nativeEvent.text);
-        }}
+        value={content}
+        onChangeText={(text) => updateContent(text)}
         textAlign="left"
         textAlignVertical="top"
         textBreakStrategy="highQuality"
