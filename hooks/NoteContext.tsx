@@ -2,6 +2,8 @@ import React from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ID } from "react-native-appwrite";
 import { Callback } from "@react-native-async-storage/async-storage/lib/typescript/types";
+import { useSession } from "@/hooks/AuthContext";
+import { create } from "react-test-renderer";
 
 export type Note = {
   id: string;
@@ -42,28 +44,73 @@ export function useStateContext() {
 export function StateProvider(props: React.PropsWithChildren) {
   const [notes, setNotes] = React.useState<Map<string, Note>>(new Map());
   const [currentNote, setCurrentNote] = React.useState<string | null>(null);
+  const {
+    createNote: createCloudNote,
+    updateNote: updateCloudNote,
+    deleteNote: deleteCloudNote,
+    readNotes: readCloudNotes,
+  } = useSession();
 
   const readNotes = async (callback: CallableFunction) => {
     try {
-      const data = await AsyncStorage.getItem("notes");
-      if (data) {
-        let loadedNotes = new Map<string, Note>();
-        const parsedNotes = JSON.parse(data);
+      const results = await Promise.allSettled([
+        readCloudNotes(),
+        AsyncStorage.getItem("notes"),
+      ]);
+      let cloudRes = results[0];
+      let localRes = results[1];
+      let cloudNotes = new Map<string, Note>();
+      if (cloudRes.status === "fulfilled") {
+        for (let item of cloudRes.value["documents"]) {
+          let id = item.$id;
+
+          let note = item;
+          if (!id) {
+            continue;
+          }
+          cloudNotes.set(id, {
+            id: id,
+            title: note["title"],
+            content: note["content"],
+          });
+        }
+      }
+      let localNotes = new Map<string, Note>();
+      if (localRes.status === "fulfilled") {
+        const parsedNotes = JSON.parse(localRes.value);
         for (let item of parsedNotes) {
           let id = item[0];
           let note = item[1];
           if (!id) {
             continue;
           }
-          loadedNotes.set(id, {
+          localNotes.set(id, {
             id: id,
             title: note["title"],
             content: note["content"],
           });
         }
-        setNotes(loadedNotes);
-        callback(loadedNotes);
       }
+
+      if (localNotes.size > 0) {
+        localNotes.forEach(async (note, id) => {
+          if (!cloudNotes.has(id)) {
+            await createCloudNote(note);
+          }
+        });
+      }
+      if (cloudNotes.size > 0) {
+        cloudNotes.forEach((note, id) => {
+          localNotes.set(id, note);
+        });
+        await AsyncStorage.setItem(
+          "notes",
+          JSON.stringify(Array.from(localNotes.entries())),
+          callback(localNotes)
+        );
+      }
+      setNotes(localNotes);
+      callback(localNotes);
     } catch (e) {
       console.error(e);
     }
@@ -72,11 +119,14 @@ export function StateProvider(props: React.PropsWithChildren) {
   const deleteNote = async (id: string, callback: CallableFunction) => {
     notes.delete(id);
     setNotes(notes);
-    await AsyncStorage.setItem(
-      "notes",
-      JSON.stringify(Array.from(notes.entries())),
-      callback(notes)
-    );
+    await Promise.allSettled([
+      deleteCloudNote(id),
+      AsyncStorage.setItem(
+        "notes",
+        JSON.stringify(Array.from(notes.entries())),
+        callback(notes)
+      ),
+    ]);
   };
 
   const createNote = async (callback: Callback) => {
@@ -89,11 +139,14 @@ export function StateProvider(props: React.PropsWithChildren) {
     notes.set(newNote.id, newNote);
     setNotes(notes);
     setCurrentNote(newNote.id);
-    await AsyncStorage.setItem(
-      "notes",
-      JSON.stringify(Array.from(notes.entries())),
-      callback
-    );
+    await Promise.allSettled([
+      createCloudNote(newNote),
+      AsyncStorage.setItem(
+        "notes",
+        JSON.stringify(Array.from(notes.entries())),
+        callback
+      ),
+    ]);
   };
 
   const updateNote = async (title: string, text: string) => {
@@ -102,10 +155,13 @@ export function StateProvider(props: React.PropsWithChildren) {
     note.content = text;
     notes.set(currentNote, note);
     setNotes(notes);
-    await AsyncStorage.setItem(
-      "notes",
-      JSON.stringify(Array.from(notes.entries()))
-    );
+    await Promise.allSettled([
+      updateCloudNote(note),
+      AsyncStorage.setItem(
+        "notes",
+        JSON.stringify(Array.from(notes.entries()))
+      ),
+    ]);
   };
 
   return (

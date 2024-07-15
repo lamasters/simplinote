@@ -1,37 +1,25 @@
-import { Stack } from "expo-router";
+import { Redirect, Stack } from "expo-router";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { useSession } from "@/hooks/AuthContext";
-import { useEffect } from "react";
-import { Client, Account } from "react-native-appwrite";
-import { useRouter } from "expo-router";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
 
 export default function AppLayout() {
   const headerColor = useThemeColor({}, "background");
   const headerTintColor = useThemeColor({}, "tint");
-  const { session, setSession } = useSession();
-  const router = useRouter();
-  const client = new Client();
-  client
-    .setEndpoint("https://homelab.hippogriff-lime.ts.net/v1")
-    .setProject("6693316c000be6973e37")
-    .setPlatform("com.lamasters.simplinote");
+  const { loading, session } = useSession();
 
-  const account = new Account(client);
+  if (loading) {
+    return (
+      <ThemedView>
+        <ThemedText>Loading...</ThemedText>
+      </ThemedView>
+    );
+  }
 
-  const checkSession = async () => {
-    if (!session) {
-      let newSession = await account.get();
-      if (newSession) {
-        setSession(newSession);
-      } else {
-        router.replace("/login");
-      }
-    }
-  };
-
-  useEffect(() => {
-    checkSession();
-  }, []);
+  if (!session.$id) {
+    return <Redirect href="/login" />;
+  }
 
   return (
     <Stack>

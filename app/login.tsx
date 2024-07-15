@@ -2,41 +2,18 @@ import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from "@/components/ThemedText";
 import { TouchableOpacity, TextInput, StyleSheet } from "react-native";
 import { useSession } from "@/hooks/AuthContext";
-import { Client, Account, ID } from "react-native-appwrite";
 import { useState } from "react";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { useRouter } from "expo-router";
 
 export default function Index() {
-  const client = new Client();
-  client
-    .setEndpoint("https://homelab.hippogriff-lime.ts.net/v1")
-    .setProject("6693316c000be6973e37")
-    .setPlatform("com.lamasters.simplinote");
-
-  const account = new Account(client);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { setSession } = useSession();
+  const { login } = useSession();
   const router = useRouter();
 
   const textColor = useThemeColor({}, "text");
   const placeholderColor = useThemeColor({}, "icon");
-
-  const login = async (email: string, password: string) => {
-    try {
-      await account.createEmailPasswordSession(email, password);
-    } catch (e) {
-      console.warn(e);
-    }
-    try {
-      let newSession = await account.get();
-      setSession(newSession);
-      router.push("/");
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   return (
     <ThemedView style={styles.container}>
@@ -59,7 +36,13 @@ export default function Index() {
         autoCapitalize="none"
         autoComplete="off"
       />
-      <TouchableOpacity onPress={() => login(email, password)}>
+      <TouchableOpacity
+        onPress={() =>
+          login(email, password, () => {
+            router.push("/");
+          })
+        }
+      >
         <ThemedText style={styles.button}>Login</ThemedText>
       </TouchableOpacity>
     </ThemedView>
