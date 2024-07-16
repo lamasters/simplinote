@@ -9,15 +9,26 @@ export default function Index() {
   const { notes, currentNote, updateNote } = useStateContext();
   const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
+  const [update, setUpdate] = useState(null);
 
   const updateContent = async (content: string) => {
     setContent(content);
-    await updateNote(title, content);
+    clearTimeout(update);
+    setUpdate(setTimeout(async () => {
+      await updateNote(title, content);
+    }, 250));
   };
 
   const updateTitle = async (title: string) => {
+    if (!title) {
+      title = "Untitled Note";
+    }
     setTitle(title);
-    await updateNote(title, content);
+    clearTimeout(update);
+    setUpdate(setTimeout(async () => {
+      await updateNote(title, content);
+      console.log("Updated note");
+    }, 250));
   };
 
   useEffect(() => {
@@ -43,7 +54,9 @@ export default function Index() {
           ...styles.titleInput,
           color: textColor,
         }}
-        value={title}
+        value={title === "Untitled Note" ? "" : title}
+        placeholder="Untitled Note"
+        placeholderTextColor={placeholderColor}
         onChangeText={(text) => updateTitle(text)}
       />
       <TextInput

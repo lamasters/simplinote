@@ -164,13 +164,10 @@ export function StateProvider(props: React.PropsWithChildren) {
     note.content = text;
     notes.set(currentNote, note);
     setNotes(notes);
-    await Promise.allSettled([
-      updateCloudNote(note),
-      AsyncStorage.setItem(
-        "notes",
-        JSON.stringify(Array.from(notes.entries()))
-      ),
-    ]);
+
+    let promises = [AsyncStorage.setItem("notes", JSON.stringify(Array.from(notes.entries())))];
+    promises.push(updateCloudNote(note));
+    await Promise.allSettled(promises);
   };
 
   return (
