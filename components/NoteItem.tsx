@@ -1,8 +1,9 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { useRouter } from "expo-router";
-import { StyleSheet, TouchableOpacity } from "react-native";
 import { Note, useStateContext } from "@/hooks/NoteContext";
+import { StyleSheet, TouchableOpacity } from "react-native";
+
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { ThemedText } from "./ThemedText";
+import { useRouter } from "expo-router";
 import { useThemeColor } from "@/hooks/useThemeColor";
 
 type Props = {

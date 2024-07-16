@@ -1,10 +1,11 @@
-import { ThemedView } from "@/components/ThemedView";
+import { StyleSheet, TextInput, TouchableOpacity } from "react-native";
+
 import { ThemedText } from "@/components/ThemedText";
-import { TouchableOpacity, TextInput, StyleSheet } from "react-native";
+import { ThemedView } from "@/components/ThemedView";
+import { useRouter } from "expo-router";
 import { useSession } from "@/hooks/AuthContext";
 import { useState } from "react";
 import { useThemeColor } from "@/hooks/useThemeColor";
-import { useRouter } from "expo-router";
 
 export default function Index() {
   const [email, setEmail] = useState("");

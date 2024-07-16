@@ -1,8 +1,9 @@
 import { Redirect, Stack } from "expo-router";
-import { useThemeColor } from "@/hooks/useThemeColor";
-import { useSession } from "@/hooks/AuthContext";
+
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import { useSession } from "@/hooks/AuthContext";
+import { useThemeColor } from "@/hooks/useThemeColor";
 
 export default function AppLayout() {
   const headerColor = useThemeColor({}, "background");
@@ -17,7 +18,7 @@ export default function AppLayout() {
     );
   }
 
-  if (!session.$id) {
+  if (!session) {
     return <Redirect href="/login" />;
   }
 

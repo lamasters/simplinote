@@ -1,14 +1,15 @@
-import React from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ID } from "react-native-appwrite";
 import { Callback } from "@react-native-async-storage/async-storage/lib/typescript/types";
+import { ID } from "react-native-appwrite";
+import React from "react";
 import { useSession } from "@/hooks/AuthContext";
-import { create } from "react-test-renderer";
 
 export type Note = {
   id: string;
   title: string;
   content: string;
+  created_at: string;
+  archived: boolean;
 };
 
 export type State = {
@@ -72,6 +73,8 @@ export function StateProvider(props: React.PropsWithChildren) {
             id: id,
             title: note["title"],
             content: note["content"],
+            created_at: note["created_at"],
+            archived: note["archived"],
           });
         }
       }
@@ -88,6 +91,8 @@ export function StateProvider(props: React.PropsWithChildren) {
             id: id,
             title: note["title"],
             content: note["content"],
+            created_at: note["created_at"],
+            archived: note["archived"],
           });
         }
       }
@@ -101,7 +106,11 @@ export function StateProvider(props: React.PropsWithChildren) {
       }
       if (cloudNotes.size > 0) {
         cloudNotes.forEach((note, id) => {
-          localNotes.set(id, note);
+          if (note.archived) {
+            localNotes.delete(id);
+          } else {          
+            localNotes.set(id, note);
+          }
         });
         await AsyncStorage.setItem(
           "notes",
@@ -117,16 +126,14 @@ export function StateProvider(props: React.PropsWithChildren) {
   };
 
   const deleteNote = async (id: string, callback: CallableFunction) => {
-    notes.delete(id);
-    setNotes(notes);
-    await Promise.allSettled([
-      deleteCloudNote(id),
-      AsyncStorage.setItem(
+    await deleteCloudNote(id);
+    await AsyncStorage.setItem(
         "notes",
         JSON.stringify(Array.from(notes.entries())),
-        callback(notes)
-      ),
-    ]);
+    );
+    notes.delete(id);
+    setNotes(notes);
+    callback(notes);
   };
 
   const createNote = async (callback: Callback) => {
@@ -134,6 +141,8 @@ export function StateProvider(props: React.PropsWithChildren) {
       id: ID.unique(),
       title: "Untitled Note",
       content: "",
+      created_at: new Date(Date.now()).toISOString(),
+      archived: false,
     };
 
     notes.set(newNote.id, newNote);

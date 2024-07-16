@@ -1,20 +1,19 @@
+import { Note, useStateContext } from "@/hooks/NoteContext";
 import { StyleSheet, View } from "react-native";
 import { useEffect, useState } from "react";
-import { NoteItem } from "@/components/NoteItem";
+
 import { Divider } from "@/components/Divider";
-import { ThemedView } from "@/components/ThemedView";
-import { useRouter } from "expo-router";
+import { NoteItem } from "@/components/NoteItem";
 import { ThemedButton } from "@/components/ThemedButton";
-import { Note, useStateContext } from "@/hooks/NoteContext";
+import { ThemedView } from "@/components/ThemedView";
 import { useIsFocused } from "@react-navigation/native";
-import { useSession } from "@/hooks/AuthContext";
+import { useRouter } from "expo-router";
 
 export default function Index() {
   const router = useRouter();
   const { readNotes, createNote, deleteNote } = useStateContext();
   const [notesList, setNotesList] = useState([]);
   const isFocused = useIsFocused();
-  const { session } = useSession();
 
   const generateNotesList = (
     notes: Map<string, Note>,
@@ -25,7 +24,9 @@ export default function Index() {
     if (notes) {
       <Divider key={0} />;
     }
-    for (let note of Array.from(notes.values())) {
+    const notesArray = Array.from(notes.values());
+    notesArray.sort((a, b) => {return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()});
+    for (let note of notesArray) {
       notesList.push(
         <NoteItem
           key={idx}

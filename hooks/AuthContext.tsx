@@ -1,20 +1,21 @@
 import {
-  createContext,
-  PropsWithChildren,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
-import { Models } from "react-native-appwrite";
-import {
   Account,
   Client,
   Databases,
   Permission,
   Role,
 } from "react-native-appwrite";
-import { Note } from "./NoteContext";
+import {
+  PropsWithChildren,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+
 import { APPWRITE_CONFIG } from "@/constants/Appwrite";
+import { Models } from "react-native-appwrite";
+import { Note } from "./NoteContext";
 
 export type Auth = {
   session: Models.User<Models.Preferences> | null;
@@ -63,7 +64,12 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
       setLoading(false);
       return session;
     }
-    let newSession = await account.get();
+    let newSession = null;
+    try {
+      newSession = await account.get();
+    } catch(e) {
+      console.warn(e);
+    }
     if (newSession) {
       setSession(newSession);
     }
@@ -98,6 +104,8 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
       {
         title: note.title,
         content: note.content,
+        created_at: new Date(Date.now()).toISOString(),
+        archived: false,
       },
       [
         Permission.read(Role.user(session.$id)),
@@ -120,11 +128,14 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
     );
   };
 
-  const deleteNote = async (note: Note) => {
-    return database.deleteDocument(
+  const deleteNote = async (note: string) => {
+    return database.updateDocument(
       APPWRITE_CONFIG.DATABASE,
       APPWRITE_CONFIG.NOTES,
-      note.id
+      note,
+      {
+        archived: true,
+      }
     );
   };
 

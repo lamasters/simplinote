@@ -1,8 +1,9 @@
-import { useStateContext } from "@/hooks/NoteContext";
-import { ThemedView } from "@/components/ThemedView";
 import { StyleSheet, TextInput } from "react-native";
-import { useThemeColor } from "@/hooks/useThemeColor";
 import { useEffect, useState } from "react";
+
+import { ThemedView } from "@/components/ThemedView";
+import { useStateContext } from "@/hooks/NoteContext";
+import { useThemeColor } from "@/hooks/useThemeColor";
 
 export default function Index() {
   const { notes, currentNote, updateNote } = useStateContext();
