@@ -4,4 +4,5 @@ export const APPWRITE_CONFIG = {
     PLATFORM: "com.lamasters.simplinote",
     DATABASE: "66933192001a619243ce",
     NOTES: "669331960032efdf2c06",
+    DEVICES: "6696ee75001d44ed7590",
 }

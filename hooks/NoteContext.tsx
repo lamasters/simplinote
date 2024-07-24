@@ -14,7 +14,6 @@ export type Note = {
 
 export type State = {
   notes: Map<string, Note>;
-  setNotes: CallableFunction;
   currentNote: string | null;
   setCurrentNote: CallableFunction;
   createNote: CallableFunction;
@@ -25,7 +24,6 @@ export type State = {
 
 const StateContext = React.createContext<State>({
   notes: new Map(),
-  setNotes: () => null,
   currentNote: null,
   setCurrentNote: () => null,
   createNote: () => null,
@@ -44,13 +42,35 @@ export function useStateContext() {
 
 export function StateProvider(props: React.PropsWithChildren) {
   const [notes, setNotes] = React.useState<Map<string, Note>>(new Map());
+  const [encryptedNotes, setEncryptedNotes] = React.useState<Map<string, Note>>(
+    new Map()
+  );
   const [currentNote, setCurrentNote] = React.useState<string | null>(null);
   const {
     createNote: createCloudNote,
     updateNote: updateCloudNote,
     deleteNote: deleteCloudNote,
     readNotes: readCloudNotes,
+    encryptText,
+    decryptText,
   } = useSession();
+
+  const decryptNotes = async (notes: Map<string, Note>) => {
+    let decryptedNotes = new Map<string, Note>();
+    for (let note of notes.entries()) {
+      let id = note[0];
+      let noteData = note[1];
+      let decryptedNote = {
+        id: id,
+        title: await decryptText(noteData.title),
+        content: await decryptText(noteData.content),
+        created_at: noteData.created_at,
+        archived: noteData.archived,
+      };
+      decryptedNotes.set(id, decryptedNote);
+    }
+    return decryptedNotes;
+  };
 
   const readNotes = async (callback: CallableFunction) => {
     try {
@@ -79,7 +99,7 @@ export function StateProvider(props: React.PropsWithChildren) {
         }
       }
       let localNotes = new Map<string, Note>();
-      if (localRes.status === "fulfilled") {
+      if (localRes.status === "fulfilled" && localRes.value) {
         const parsedNotes = JSON.parse(localRes.value);
         for (let item of parsedNotes) {
           let id = item[0];
@@ -108,31 +128,34 @@ export function StateProvider(props: React.PropsWithChildren) {
         cloudNotes.forEach((note, id) => {
           if (note.archived) {
             localNotes.delete(id);
-          } else {          
+          } else {
             localNotes.set(id, note);
           }
         });
         await AsyncStorage.setItem(
           "notes",
-          JSON.stringify(Array.from(localNotes.entries())),
-          callback(localNotes)
+          JSON.stringify(Array.from(localNotes.entries()))
         );
       }
-      setNotes(localNotes);
-      callback(localNotes);
+      const decryptedNotes = await decryptNotes(localNotes);
+      setEncryptedNotes(localNotes);
+      setNotes(decryptedNotes);
+      callback(decryptedNotes);
     } catch (e) {
       console.error(e);
     }
   };
 
   const deleteNote = async (id: string, callback: CallableFunction) => {
+    notes.delete(id);
+    encryptedNotes.delete(id);
     await deleteCloudNote(id);
     await AsyncStorage.setItem(
-        "notes",
-        JSON.stringify(Array.from(notes.entries())),
+      "notes",
+      JSON.stringify(Array.from(encryptedNotes.entries()))
     );
-    notes.delete(id);
     setNotes(notes);
+    setEncryptedNotes(encryptedNotes);
     callback(notes);
   };
 
@@ -144,37 +167,50 @@ export function StateProvider(props: React.PropsWithChildren) {
       created_at: new Date(Date.now()).toISOString(),
       archived: false,
     };
-
+    const encryptedNote = {
+      ...newNote,
+      title: await encryptText(newNote.title),
+      content: await encryptText(newNote.content),
+    };
     notes.set(newNote.id, newNote);
+    encryptedNotes.set(newNote.id, encryptedNote);
     setNotes(notes);
+    setEncryptedNotes(encryptedNotes);
     setCurrentNote(newNote.id);
     await Promise.allSettled([
-      createCloudNote(newNote),
+      createCloudNote(encryptedNote),
       AsyncStorage.setItem(
         "notes",
-        JSON.stringify(Array.from(notes.entries())),
+        JSON.stringify(Array.from(encryptedNotes.entries())),
         callback
       ),
     ]);
   };
 
-  const updateNote = async (title: string, text: string) => {
+  const updateNote = async (title: string, content: string) => {
     let note = notes.get(currentNote);
+    let encryptedNote = encryptedNotes.get(currentNote);
     note.title = title;
-    note.content = text;
+    note.content = content;
+    encryptedNote.title = await encryptText(title);
+    encryptedNote.content = await encryptText(content);
     notes.set(currentNote, note);
+    encryptedNotes.set(currentNote, encryptedNote);
     setNotes(notes);
-
-    let promises = [AsyncStorage.setItem("notes", JSON.stringify(Array.from(notes.entries())))];
-    promises.push(updateCloudNote(note));
-    await Promise.allSettled(promises);
+    setEncryptedNotes(encryptedNotes);
+    await Promise.allSettled([
+      updateCloudNote(encryptedNote),
+      AsyncStorage.setItem(
+        "notes",
+        JSON.stringify(Array.from(encryptedNotes.entries()))
+      ),
+    ]);
   };
 
   return (
     <StateContext.Provider
       value={{
         notes,
-        setNotes,
         currentNote,
         setCurrentNote,
         createNote,
