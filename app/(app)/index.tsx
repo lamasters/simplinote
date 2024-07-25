@@ -11,6 +11,7 @@ import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useSession } from "@/hooks/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
+import { ActionSheet } from "@/components/ActionSheet";
 
 export default function Index() {
   const router = useRouter();
@@ -18,6 +19,8 @@ export default function Index() {
   const [notesList, setNotesList] = useState([]);
   const isFocused = useIsFocused();
   const { newDevices } = useSession();
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleteNoteId, setDeleteNoteId] = useState("");
 
   const generateNotesList = (
     notes: Map<string, Note>,
@@ -39,11 +42,10 @@ export default function Index() {
         <NoteItem
           key={idx}
           note={note}
-          deleteNote={() =>
-            deleteNote(note.id, (n) => {
-              setNotesList(generateNotesList(n, setNotesList));
-            })
-          }
+          deleteNote={() => {
+            setDeleteNoteId(note.id);
+            setShowDelete(true);
+          }}
         />
       );
       idx++;
@@ -69,6 +71,28 @@ export default function Index() {
           createNote(() => router.push("edit"));
         }}
       />
+      {showDelete ? (
+        <ActionSheet
+          actions={[
+            {
+              title: "Delete",
+              action: () => {
+                deleteNote(deleteNoteId, (n) =>
+                  setNotesList(generateNotesList(n, setNotesList))
+                );
+                setShowDelete(false);
+              },
+              color: "red",
+            },
+            {
+              title: "Cancel",
+              action: () => {
+                setShowDelete(false);
+              },
+            },
+          ]}
+        />
+      ) : null}
       {newDevices.length > 0 ? (
         <TouchableOpacity
           style={styles.newDeviceCard}
