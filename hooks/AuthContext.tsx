@@ -6,6 +6,7 @@ import {
   Databases,
   ID,
   Permission,
+  Query,
   Role,
 } from "react-native-appwrite";
 import {
@@ -39,6 +40,7 @@ export type Auth = {
   readNotes: CallableFunction;
   encryptText: CallableFunction;
   decryptText: CallableFunction;
+  accountKey: string | null;
 };
 
 const AuthContext = createContext<Auth>({
@@ -51,6 +53,7 @@ const AuthContext = createContext<Auth>({
   readNotes: () => null,
   encryptText: () => null,
   decryptText: () => null,
+  accountKey: null,
 });
 
 export function useSession() {
@@ -166,20 +169,23 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
     } else {
       console.log("No account key found");
       const deviceId = await hash(storedPublicKey);
-      const device = await database.getDocument(
+      const devices = await database.listDocuments(
         APPWRITE_CONFIG.DATABASE,
         APPWRITE_CONFIG.DEVICES,
-        deviceId
+        [Query.equal("key_hash", deviceId)]
       );
-      let decryptedAccountKey = await decryptKey(
-        storedPrivateKey,
-        device["account_key"]
-      );
-      await SecureStore.setItemAsync(
-        "accountKey",
-        JSON.stringify(decryptedAccountKey)
-      );
-      setAccountKey(decryptedAccountKey);
+      console.log("Got device documents", devices);
+      if (devices.total == 1 && devices.documents[0]["account_key"]) {
+        let decryptedAccountKey = await decryptKey(
+          storedPrivateKey,
+          devices.documents[0]["account_key"]
+        );
+        await SecureStore.setItemAsync(
+          "accountKey",
+          JSON.stringify(decryptedAccountKey)
+        );
+        setAccountKey(decryptedAccountKey);
+      }
     }
   };
 
@@ -210,6 +216,7 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
     if (newSession) {
       setSession(newSession);
     }
+    setLoading(false);
     return newSession;
   };
 
@@ -298,6 +305,7 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
         readNotes: readNotes,
         encryptText: (text: string) => encryptString(text, accountKey),
         decryptText: (text: string) => decryptString(text, accountKey),
+        accountKey: accountKey,
       }}
     >
       {props.children}
