@@ -30,6 +30,14 @@ import { APPWRITE_CONFIG } from "@/constants/Appwrite";
 import { Models } from "react-native-appwrite";
 import { Note } from "./NoteContext";
 
+export type Device = {
+  id: string;
+  name: string;
+  device_key: string;
+  key_hash: string;
+  account_key?: string;
+};
+
 export type Auth = {
   session: Models.User<Models.Preferences> | null;
   login: CallableFunction;
@@ -40,7 +48,10 @@ export type Auth = {
   readNotes: CallableFunction;
   encryptText: CallableFunction;
   decryptText: CallableFunction;
+  setDeviceAccountKey: CallableFunction;
+  removeDevice: CallableFunction;
   accountKey: string | null;
+  newDevices: Array<Device>;
 };
 
 const AuthContext = createContext<Auth>({
@@ -53,7 +64,10 @@ const AuthContext = createContext<Auth>({
   readNotes: () => null,
   encryptText: () => null,
   decryptText: () => null,
+  setDeviceAccountKey: () => null,
+  removeDevice: () => null,
   accountKey: null,
+  newDevices: [],
 });
 
 export function useSession() {
@@ -73,6 +87,7 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
   const account = new Account(client);
   const database = new Databases(client);
   const [accountKey, setAccountKey] = useState<string | null>(null);
+  const [newDevices, setNewDevices] = useState<Array<Device>>([]);
 
   const getDeviceKey = async (keyName: string) => {
     let key = JSON.parse(await SecureStore.getItemAsync(keyName));
@@ -152,6 +167,49 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
     }
   };
 
+  const checkNewDevices = async () => {
+    const devices = await database.listDocuments(
+      APPWRITE_CONFIG.DATABASE,
+      APPWRITE_CONFIG.DEVICES,
+      [Query.isNull("account_key")]
+    );
+
+    if (devices.total > 0) {
+      let newDeviceList = [];
+      devices.documents.forEach((device) => {
+        newDeviceList.push({
+          id: device.$id,
+          name: device.name,
+          device_key: device.device_key,
+          key_hash: device.key_hash,
+        });
+      });
+      setNewDevices(newDeviceList);
+    }
+  };
+
+  const setDeviceAccountKey = async (device: Device) => {
+    const encryptedAccountKey = await encryptKey(device.device_key, accountKey);
+    await database.updateDocument(
+      APPWRITE_CONFIG.DATABASE,
+      APPWRITE_CONFIG.DEVICES,
+      device.id,
+      {
+        account_key: encryptedAccountKey,
+      }
+    );
+    setNewDevices(newDevices.filter((d) => d.id !== device.id));
+  };
+
+  const removeDevice = async (device: Device) => {
+    await database.deleteDocument(
+      APPWRITE_CONFIG.DATABASE,
+      APPWRITE_CONFIG.DEVICES,
+      device.id
+    );
+    setNewDevices(newDevices.filter((d) => d.id !== device.id));
+  };
+
   const getKeys = async () => {
     let storedPublicKey = await getDeviceKey("publicKey");
     let storedPrivateKey = await getDeviceKey("privateKey");
@@ -166,6 +224,7 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
     if (accountKey) {
       console.log("Importing account key");
       setAccountKey(accountKey);
+      await checkNewDevices();
     } else {
       console.log("No account key found");
       const deviceId = await hash(storedPublicKey);
@@ -185,6 +244,7 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
           JSON.stringify(decryptedAccountKey)
         );
         setAccountKey(decryptedAccountKey);
+        await checkNewDevices();
       }
     }
   };
@@ -305,7 +365,10 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
         readNotes: readNotes,
         encryptText: (text: string) => encryptString(text, accountKey),
         decryptText: (text: string) => decryptString(text, accountKey),
+        setDeviceAccountKey: setDeviceAccountKey,
+        removeDevice: removeDevice,
         accountKey: accountKey,
+        newDevices: newDevices,
       }}
     >
       {props.children}

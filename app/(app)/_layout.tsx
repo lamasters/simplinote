@@ -53,6 +53,16 @@ export default function AppLayout() {
           },
         }}
       />
+      <Stack.Screen
+        name="setup"
+        options={{
+          title: "Setup Devices",
+          headerTintColor: headerTintColor,
+          headerStyle: {
+            backgroundColor: headerColor,
+          },
+        }}
+      />
     </Stack>
   );
 }

@@ -1,19 +1,23 @@
 import { Note, useStateContext } from "@/hooks/NoteContext";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { useEffect, useState } from "react";
 
 import { Divider } from "@/components/Divider";
 import { NoteItem } from "@/components/NoteItem";
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedView } from "@/components/ThemedView";
+import { ThemedText } from "@/components/ThemedText";
 import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
+import { useSession } from "@/hooks/AuthContext";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function Index() {
   const router = useRouter();
   const { readNotes, createNote, deleteNote } = useStateContext();
   const [notesList, setNotesList] = useState([]);
   const isFocused = useIsFocused();
+  const { newDevices } = useSession();
 
   const generateNotesList = (
     notes: Map<string, Note>,
@@ -25,7 +29,11 @@ export default function Index() {
       <Divider key={0} />;
     }
     const notesArray = Array.from(notes.values());
-    notesArray.sort((a, b) => {return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()});
+    notesArray.sort((a, b) => {
+      return (
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+    });
     for (let note of notesArray) {
       notesList.push(
         <NoteItem
@@ -61,6 +69,17 @@ export default function Index() {
           createNote(() => router.push("edit"));
         }}
       />
+      {newDevices.length > 0 ? (
+        <TouchableOpacity
+          style={styles.newDeviceCard}
+          onPress={() => router.push("setup")}
+        >
+          <Ionicons name="information-circle" size={24} color="#60c0f6" />
+          <ThemedText style={{ margin: 10 }}>
+            Tap to set up new devices
+          </ThemedText>
+        </TouchableOpacity>
+      ) : null}
     </ThemedView>
   );
 }
@@ -79,5 +98,18 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 50,
+  },
+  newDeviceCard: {
+    position: "absolute",
+    display: "flex",
+    flexDirection: "row",
+    bottom: 100,
+    left: "5%",
+    width: "90%",
+    height: 50,
+    borderRadius: 10,
+    backgroundColor: "rgba(100, 100, 100, 0.4)",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
