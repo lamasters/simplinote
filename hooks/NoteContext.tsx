@@ -53,6 +53,7 @@ export function StateProvider(props: React.PropsWithChildren) {
     readNotes: readCloudNotes,
     encryptText,
     decryptText,
+    session,
   } = useSession();
 
   const decryptNotes = async (notes: Map<string, Note>) => {
@@ -76,7 +77,7 @@ export function StateProvider(props: React.PropsWithChildren) {
     try {
       const results = await Promise.allSettled([
         readCloudNotes(),
-        AsyncStorage.getItem("notes"),
+        AsyncStorage.getItem(session.$id),
       ]);
       let cloudRes = results[0];
       let localRes = results[1];
@@ -133,7 +134,7 @@ export function StateProvider(props: React.PropsWithChildren) {
           }
         });
         await AsyncStorage.setItem(
-          "notes",
+          session.$id,
           JSON.stringify(Array.from(localNotes.entries()))
         );
       }
@@ -151,7 +152,7 @@ export function StateProvider(props: React.PropsWithChildren) {
     encryptedNotes.delete(id);
     await deleteCloudNote(id);
     await AsyncStorage.setItem(
-      "notes",
+      session.$id,
       JSON.stringify(Array.from(encryptedNotes.entries()))
     );
     setNotes(notes);
@@ -180,7 +181,7 @@ export function StateProvider(props: React.PropsWithChildren) {
     await Promise.allSettled([
       createCloudNote(encryptedNote),
       AsyncStorage.setItem(
-        "notes",
+        session.$id,
         JSON.stringify(Array.from(encryptedNotes.entries())),
         callback
       ),
@@ -201,7 +202,7 @@ export function StateProvider(props: React.PropsWithChildren) {
     await Promise.allSettled([
       updateCloudNote(encryptedNote),
       AsyncStorage.setItem(
-        "notes",
+        session.$id,
         JSON.stringify(Array.from(encryptedNotes.entries()))
       ),
     ]);

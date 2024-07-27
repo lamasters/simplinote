@@ -22,11 +22,9 @@ export const decryptKey = async (deviceKey: string, accountKey: string) => {
 };
 
 export const encryptString = async (plainText: string, key: string) => {
-  console.log("Encrypting string", plainText);
   return Aes.encrypt(plainText, key, null, "aes-256-ctr");
 };
 
 export const decryptString = async (cipherText: string, key: string) => {
-  console.log("Decrypting string", cipherText);
   return Aes.decrypt(cipherText, key, null, "aes-256-ctr");
 };
