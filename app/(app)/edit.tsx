@@ -14,9 +14,11 @@ export default function Index() {
   const updateContent = async (content: string) => {
     setContent(content);
     clearTimeout(update);
-    setUpdate(setTimeout(async () => {
-      await updateNote(title, content);
-    }, 250));
+    setUpdate(
+      setTimeout(async () => {
+        await updateNote(title, content);
+      }, 500)
+    );
   };
 
   const updateTitle = async (title: string) => {
@@ -25,10 +27,11 @@ export default function Index() {
     }
     setTitle(title);
     clearTimeout(update);
-    setUpdate(setTimeout(async () => {
-      await updateNote(title, content);
-      console.log("Updated note");
-    }, 250));
+    setUpdate(
+      setTimeout(async () => {
+        await updateNote(title, content);
+      }, 500)
+    );
   };
 
   useEffect(() => {

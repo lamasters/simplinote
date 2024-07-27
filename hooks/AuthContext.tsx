@@ -41,6 +41,7 @@ export type Device = {
 export type Auth = {
   session: Models.User<Models.Preferences> | null;
   login: CallableFunction;
+  signup: CallableFunction;
   loading: boolean;
   createNote: CallableFunction;
   updateNote: CallableFunction;
@@ -57,6 +58,7 @@ export type Auth = {
 const AuthContext = createContext<Auth>({
   session: null,
   login: () => null,
+  signup: () => null,
   loading: true,
   createNote: () => null,
   updateNote: () => null,
@@ -98,17 +100,12 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
   };
 
   const registerDevice = async () => {
-    console.log("Creating new device keys");
     const keyPair = await createDeviceKeys();
-    console.log("Keys created");
     let deviceId = await hash(keyPair.public);
-    console.log("Device ID: ", deviceId);
     const devices = await database.listDocuments(
       APPWRITE_CONFIG.DATABASE,
       APPWRITE_CONFIG.DEVICES
     );
-    console.log("Devices: ", devices);
-    console.log("Session ID: ", session.$id);
     let sessionInfo;
     try {
       let sessions = await account.listSessions();
@@ -117,29 +114,20 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
     } catch (e) {
       console.error(e);
     }
-    console.log("Session info: ", sessionInfo);
     let deviceDocument = {
       name: `${sessionInfo.deviceBrand} ${sessionInfo.deviceModel} ${sessionInfo.osName}`,
       device_key: keyPair.public,
       key_hash: deviceId,
     };
-    console.log("Device document: ", deviceDocument);
-    console.log("Device key length: ", keyPair.public.length);
     if (devices.documents.length === 0) {
-      console.log("Creating new account key");
       let newAccountKey = await createAccountKey();
-      console.log("Encrypting account key");
       let encryptedKey = await encryptKey(keyPair.public, newAccountKey);
-      console.log("Storing account key");
       await SecureStore.setItemAsync(
         "accountKey",
         JSON.stringify(newAccountKey)
       );
-      console.log("Setting account key on database document");
       deviceDocument["account_key"] = encryptedKey;
-      console.log("Account key length: ", encryptedKey.length);
     }
-    console.log("Creating device document");
     try {
       await database.createDocument(
         APPWRITE_CONFIG.DATABASE,
@@ -153,7 +141,6 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
           Permission.delete(Role.user(session.$id)),
         ]
       );
-      console.log("Uploaded device document", deviceDocument);
       await SecureStore.setItemAsync(
         "publicKey",
         JSON.stringify(keyPair.public)
@@ -214,26 +201,20 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
     let storedPublicKey = await getDeviceKey("publicKey");
     let storedPrivateKey = await getDeviceKey("privateKey");
     if (!storedPublicKey || !storedPrivateKey) {
-      console.log("New device! Registering...");
       await registerDevice();
     } else {
-      console.log("Existing device! Getting keys...");
     }
     let accountKey = JSON.parse(await SecureStore.getItemAsync("accountKey"));
-    console.log("Got account key result");
     if (accountKey) {
-      console.log("Importing account key");
       setAccountKey(accountKey);
       await checkNewDevices();
     } else {
-      console.log("No account key found");
       const deviceId = await hash(storedPublicKey);
       const devices = await database.listDocuments(
         APPWRITE_CONFIG.DATABASE,
         APPWRITE_CONFIG.DEVICES,
         [Query.equal("key_hash", deviceId)]
       );
-      console.log("Got device documents", devices);
       if (devices.total == 1 && devices.documents[0]["account_key"]) {
         let decryptedAccountKey = await decryptKey(
           storedPrivateKey,
@@ -256,13 +237,8 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
   const getSession = async () => {
     setLoading(true);
     if (session) {
-      console.log("Existing session");
       if (!accountKey) {
-        console.log("Getting keys for session ", session.$id);
         await getKeys();
-        console.log("Got keys");
-      } else {
-        console.log("Already have keys");
       }
       setLoading(false);
       return session;
@@ -319,6 +295,37 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
     );
   };
 
+  const signup = async (
+    email: string,
+    password: string,
+    confirmPassword: string,
+    callback: CallableFunction
+  ) => {
+    if (password !== confirmPassword) {
+      return;
+    }
+    try {
+      const name = email.split("@")[0];
+      await account.create(ID.unique(), email, password, name);
+    } catch (e) {
+      console.warn(e);
+    }
+
+    try {
+      await account.createEmailPasswordSession(email, password);
+    } catch (e) {
+      console.warn(e);
+    }
+
+    try {
+      let newSession = await account.get();
+      setSession(newSession);
+      callback();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const updateNote = async (note: Note) => {
     return database.updateDocument(
       APPWRITE_CONFIG.DATABASE,
@@ -358,6 +365,7 @@ export function AuthProvider(props: PropsWithChildren<{}>) {
       value={{
         session: session,
         login: login,
+        signup: signup,
         loading: loading,
         createNote: createNote,
         updateNote: updateNote,

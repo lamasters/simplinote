@@ -1,10 +1,10 @@
+import { useRouter } from "expo-router";
+import { useState } from "react";
 import { StyleSheet, TextInput, TouchableOpacity } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import { useRouter } from "expo-router";
 import { useSession } from "@/hooks/AuthContext";
-import { useState } from "react";
 import { useThemeColor } from "@/hooks/useThemeColor";
 
 export default function Index() {
@@ -45,6 +45,9 @@ export default function Index() {
         }
       >
         <ThemedText style={styles.button}>Login</ThemedText>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => router.replace("/signup")}>
+        <ThemedText style={styles.button}>Sign Up</ThemedText>
       </TouchableOpacity>
     </ThemedView>
   );
